@@ -1,16 +1,28 @@
-# flutter_task
+# Flutter Assessment Task
 
-A new Flutter project.
+## 📱 Overview
+This app fetches users, their posts and todos from [DummyJSON API](https://dummyjson.com) using BLoC and clean code structure.
 
-## Getting Started
+## 🔧 Setup Instructions
+1. Clone the repo:
+git clone https://github.com/your-username/flutter_task.git
+2.  Get dependencies:
+flutter pub get
+3. Run the app:
+flutter run
 
-This project is a starting point for a Flutter application.
 
-A few resources to get you started if this is your first Flutter project:
+## 🧠 Architecture
+- BLoC pattern for state management
+- Repository pattern for data handling
+- Clean folder structure
+- Handles API loading, error, and pagination states
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## 🚀 Features
+- Fetch & display users with pagination and search
+- View user details, posts, and todos
+- Create local posts
+- Infinite scroll + error handling
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 🏆 Bonus
+- (Add if you implemented pull-to-refresh or dark mode)
