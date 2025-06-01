@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Flutter Assessment Task
 
 ## 📱 Overview
@@ -26,3 +27,6 @@ flutter run
 
 ## 🏆 Bonus
 - (Add if you implemented pull-to-refresh or dark mode)
+=======
+# flutter_task
+>>>>>>> 15f2f5cdcde6dfda13f4f03c1614cece1ee3c58e
