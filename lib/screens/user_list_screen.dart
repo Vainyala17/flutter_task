@@ -7,7 +7,7 @@ import '../blocs/user/user_state.dart';
 import '../widgets/user_card.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/error_widget.dart';
-import 'user_detail_screen.dart';
+import 'user_detail_screen.dart' as detail_screen; // Use alias to avoid conflicts
 
 class UserListScreen extends StatefulWidget {
   const UserListScreen({super.key});
@@ -75,7 +75,6 @@ class _UserListScreenState extends State<UserListScreen> {
                   : Icons.dark_mode,
             ),
             onPressed: () {
-              // Toggle theme - this would require theme management
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Theme toggle feature coming soon!'),
@@ -88,7 +87,6 @@ class _UserListScreenState extends State<UserListScreen> {
       ),
       body: Column(
         children: [
-          // Search Bar
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
@@ -106,7 +104,6 @@ class _UserListScreenState extends State<UserListScreen> {
               onChanged: _onSearchChanged,
             ),
           ),
-          // User List
           Expanded(
             child: BlocConsumer<UserBloc, UserState>(
               listener: (context, state) {
@@ -184,10 +181,20 @@ class _UserListScreenState extends State<UserListScreen> {
                           return UserCard(
                             user: user,
                             onTap: () {
+                              // Convert the User model to the format expected by UserDetailScreen
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => UserDetailScreen(user: user),
+                                  builder: (context) => detail_screen.UserDetailScreen(
+                                    user: detail_screen.User(
+                                      // Map the properties from your model User to detail_screen.User
+                                      // You'll need to adjust these based on your actual User model properties
+                                      id: user.id,
+                                      name: user.name,
+                                      email: user.email, username: '', phone: '', website: '',
+                                      // Add other properties as needed
+                                    ),
+                                  ),
                                 ),
                               );
                             },

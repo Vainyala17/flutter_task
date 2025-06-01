@@ -33,7 +33,6 @@ class MyApp extends StatelessWidget {
         title: 'Flutter User Management',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          primarySwatch: Colors.blue,
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(
             seedColor: Colors.blue,
@@ -44,10 +43,10 @@ class MyApp extends StatelessWidget {
             elevation: 0,
             scrolledUnderElevation: 1,
           ),
-          cardTheme: CardTheme(
+          cardTheme: const CardThemeData(
             elevation: 2,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.all(Radius.circular(12)),
             ),
           ),
           inputDecorationTheme: InputDecorationTheme(
@@ -59,7 +58,6 @@ class MyApp extends StatelessWidget {
           ),
         ),
         darkTheme: ThemeData(
-          primarySwatch: Colors.blue,
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(
             seedColor: Colors.blue,
@@ -70,15 +68,15 @@ class MyApp extends StatelessWidget {
             elevation: 0,
             scrolledUnderElevation: 1,
           ),
-          cardTheme: CardTheme(
+          cardTheme: const CardThemeData(
             elevation: 2,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.all(Radius.circular(12)),
             ),
           ),
-          inputDecorationTheme: InputDecorationTheme(
+          inputDecorationTheme: const InputDecorationTheme(
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.all(Radius.circular(12)),
             ),
             filled: true,
           ),

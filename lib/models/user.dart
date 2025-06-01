@@ -65,6 +65,8 @@ class User extends Equatable {
     address,
     company,
   ];
+
+  get name => null;
 }
 
 class Address extends Equatable {
