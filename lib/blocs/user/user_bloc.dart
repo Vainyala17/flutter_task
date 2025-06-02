@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hive/hive.dart';
+import '../../models/user.dart';
 import '../../repositories/api_service.dart';
 import 'user_event.dart';
 import 'user_state.dart';
 
 class UserBloc extends Bloc<UserEvent, UserState> {
   final ApiService _apiService;
+
   static const int _pageSize = 30;
   Timer? _debounceTimer;
 
@@ -19,27 +22,51 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     on<RefreshUsersEvent>(_onRefreshUsers);
   }
 
-  Future<void> _onFetchUsers(FetchUsersEvent event,
-      Emitter<UserState> emit,) async {
+  Future<void> _onFetchUsers(
+      FetchUsersEvent event,
+      Emitter<UserState> emit,
+      ) async {
     if (state.hasReachedMax && !event.isRefresh) return;
 
     try {
-      if (state.status == UserStatus.initial || event.isRefresh) {
-        emit(state.copyWith(status: UserStatus.loading));
+      emit(state.copyWith(status: UserStatus.loading));
 
-        final response = await _apiService.fetchUsers(
-          limit: _pageSize,
-          skip: 0,
-        );
+      // ✅ STEP A: Load from Hive first (if not refreshing)
+      if (!event.isRefresh) {
+        final userBox = Hive.box('users');
+        final cached = userBox.get('cachedUsers');
 
-        emit(state.copyWith(
-          status: UserStatus.success,
-          users: response.users,
-          hasReachedMax: response.users.length < _pageSize,
-          currentPage: 1,
-          totalUsers: response.total,
-        ));
+        if (cached != null) {
+          final cachedUsers = (cached as List)
+              .map((e) => User.fromJson(Map<String, dynamic>.from(e)))
+              .toList();
+
+          emit(state.copyWith(
+            status: UserStatus.success,
+            users: cachedUsers,
+            hasReachedMax: false,
+            currentPage: 1,
+            totalUsers: cachedUsers.length,
+          ));
+        }
       }
+
+      // ✅ STEP B: Fetch from API
+      final response = await _apiService.fetchUsers(limit: _pageSize, skip: 0);
+
+      // ✅ STEP C: Save to Hive
+      final userBox = Hive.box('users');
+      userBox.put(
+          'cachedUsers', response.users.map((u) => u.toJson()).toList());
+
+      // ✅ STEP D: Emit fetched data
+      emit(state.copyWith(
+        status: UserStatus.success,
+        users: response.users,
+        hasReachedMax: response.users.length < _pageSize,
+        currentPage: 1,
+        totalUsers: response.total,
+      ));
     } catch (error) {
       emit(state.copyWith(
         status: UserStatus.failure,
@@ -47,6 +74,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       ));
     }
   }
+
 
   Future<void> _onLoadMoreUsers(LoadMoreUsersEvent event,
       Emitter<UserState> emit,) async {

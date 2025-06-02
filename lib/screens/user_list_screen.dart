@@ -100,8 +100,7 @@ class _UserListScreenState extends State<UserListScreen> {
           padding: const EdgeInsets.all(16),
           itemCount: filteredUsers.length,
           itemBuilder: (context, index) {
-            final user = filteredUsers[index];
-            return _buildUserCard(user);
+            return _buildUserCard(filteredUsers[index]);
           },
         ),
       ),

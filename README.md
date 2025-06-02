@@ -30,10 +30,13 @@ lib/
 │   └── todo/          # Todos BLoC
 ├── models/            # Data models (User, Post, Todo)
 ├── repositories/      # API service layer
+|      ├── api_service
 ├── screens/
 │   ├── user_list/
 │   ├── user_detail/
 │   └── create_post/
+|── utils/
+|    ├── constants
 ├── widgets/           # Custom reusable widgets
 └── main.dart
 ```

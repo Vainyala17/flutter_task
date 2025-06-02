@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/adapters.dart';
 import 'repositories/api_service.dart';
 import 'blocs/user/user_bloc.dart';
 import 'blocs/post/post_bloc.dart';
 import 'blocs/todo/todo_bloc.dart';
 import 'screens/user_list_screen.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();  // initialize Hive
+  await Hive.openBox('users');  // open a box to store user data
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
