@@ -187,12 +187,12 @@ class _UserListScreenState extends State<UserListScreen> {
                                 MaterialPageRoute(
                                   builder: (context) => detail_screen.UserDetailScreen(
                                     user: detail_screen.User(
-                                      // Map the properties from your model User to detail_screen.User
-                                      // You'll need to adjust these based on your actual User model properties
-                                      id: user.id,
-                                      name: user.name,
-                                      email: user.email, username: '', phone: '', website: '',
-                                      // Add other properties as needed
+                                      id: user.id ?? 0,
+                                      name: "${user.firstName ?? ''} ${user.lastName ?? ''}".trim(),
+                                      email: user.email ?? '',
+                                      username: user.username ?? '',
+                                      phone: user.phone ?? '',
+                                      website: '', // This field doesn't exist in your JSON
                                     ),
                                   ),
                                 ),
