@@ -1,65 +1,64 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:pull_to_refresh/pull_to_refresh.dart';
-import '../blocs/user/user_bloc.dart';
-import '../blocs/user/user_event.dart';
-import '../blocs/user/user_state.dart';
-import '../widgets/user_card.dart';
-import '../widgets/loading_widget.dart';
-import '../widgets/error_widget.dart';
-import 'user_detail_screen.dart' as detail_screen; // Use alias to avoid conflicts
+import 'package:flutter_task/screens/user_detail_screen.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class UserListScreen extends StatefulWidget {
-  const UserListScreen({super.key});
+  const UserListScreen({Key? key}) : super(key: key);
 
   @override
   State<UserListScreen> createState() => _UserListScreenState();
 }
 
 class _UserListScreenState extends State<UserListScreen> {
-  final ScrollController _scrollController = ScrollController();
+  List<User> users = [];
+  List<User> filteredUsers = [];
+  bool isLoading = true;
   final TextEditingController _searchController = TextEditingController();
-  final RefreshController _refreshController = RefreshController();
 
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
-    context.read<UserBloc>().add(const FetchUsersEvent());
+    _fetchUsers();
+    _searchController.addListener(_filterUsers);
   }
 
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    _searchController.dispose();
-    _refreshController.dispose();
-    super.dispose();
-  }
+  Future<void> _fetchUsers() async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://dummyjson.com/users'),
+      );
 
-  void _onScroll() {
-    if (_isBottom) {
-      context.read<UserBloc>().add(const LoadMoreUsersEvent());
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          users = (data['users'] as List)
+              .map((user) => User.fromJson(user))
+              .toList();
+          filteredUsers = users;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading users: $e')),
+      );
     }
   }
 
-  bool get _isBottom {
-    if (!_scrollController.hasClients) return false;
-    final maxScroll = _scrollController.position.maxScrollExtent;
-    final currentScroll = _scrollController.offset;
-    return currentScroll >= (maxScroll * 0.9);
-  }
-
-  void _onRefresh() {
-    context.read<UserBloc>().add(const RefreshUsersEvent());
-  }
-
-  void _onSearchChanged(String query) {
-    context.read<UserBloc>().add(SearchUsersEvent(query));
-  }
-
-  void _clearSearch() {
-    _searchController.clear();
-    context.read<UserBloc>().add(const ClearSearchEvent());
+  void _filterUsers() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      filteredUsers = users.where((user) {
+        return user.firstName.toLowerCase().contains(query) ||
+            user.lastName.toLowerCase().contains(query) ||
+            user.username.toLowerCase().contains(query) ||
+            (user.email?.toLowerCase().contains(query) ?? false);
+      }).toList();
+    });
   }
 
   @override
@@ -67,147 +66,218 @@ class _UserListScreenState extends State<UserListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Users'),
-        actions: [
-          IconButton(
-            icon: Icon(
-              Theme.of(context).brightness == Brightness.dark
-                  ? Icons.light_mode
-                  : Icons.dark_mode,
-            ),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Theme toggle feature coming soon!'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
+        elevation: 0,
+        backgroundColor: Colors.blue.shade600,
+        foregroundColor: Colors.white,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search users by name...',
+                hintText: 'Search users...',
                 prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: _clearSearch,
-                )
-                    : null,
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20),
               ),
-              onChanged: _onSearchChanged,
             ),
           ),
-          Expanded(
-            child: BlocConsumer<UserBloc, UserState>(
-              listener: (context, state) {
-                if (state.status == UserStatus.success) {
-                  _refreshController.refreshCompleted();
-                } else if (state.status == UserStatus.failure) {
-                  _refreshController.refreshFailed();
-                  if (state.errorMessage != null) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(state.errorMessage!),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                }
-              },
-              builder: (context, state) {
-                switch (state.status) {
-                  case UserStatus.initial:
-                  case UserStatus.loading:
-                    return const Center(child: LoadingWidget());
+        ),
+      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : filteredUsers.isEmpty
+          ? _buildEmptyState()
+          : RefreshIndicator(
+        onRefresh: _fetchUsers,
+        child: ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: filteredUsers.length,
+          itemBuilder: (context, index) {
+            final user = filteredUsers[index];
+            return _buildUserCard(user);
+          },
+        ),
+      ),
+    );
+  }
 
-                  case UserStatus.failure:
-                    return CustomErrorWidget(
-                      message: state.errorMessage ?? 'Something went wrong',
-                      onRetry: () {
-                        context.read<UserBloc>().add(const FetchUsersEvent());
-                      },
-                    );
-
-                  case UserStatus.success:
-                  case UserStatus.loadingMore:
-                    if (state.users.isEmpty) {
-                      return const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.person_off,
-                              size: 64,
-                              color: Colors.grey,
-                            ),
-                            SizedBox(height: 16),
-                            Text(
-                              'No users found',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    return SmartRefresher(
-                      controller: _refreshController,
-                      onRefresh: _onRefresh,
-                      child: ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: state.hasReachedMax
-                            ? state.users.length
-                            : state.users.length + 1,
-                        itemBuilder: (context, index) {
-                          if (index >= state.users.length) {
-                            return const Padding(
-                              padding: EdgeInsets.all(16.0),
-                              child: Center(child: LoadingWidget()),
-                            );
-                          }
-
-                          final user = state.users[index];
-                          return UserCard(
-                            user: user,
-                            onTap: () {
-                              // Convert the User model to the format expected by UserDetailScreen
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => detail_screen.UserDetailScreen(
-                                    user: detail_screen.User(
-                                      id: user.id ?? 0,
-                                      name: "${user.firstName ?? ''} ${user.lastName ?? ''}".trim(),
-                                      email: user.email ?? '',
-                                      username: user.username ?? '',
-                                      phone: user.phone ?? '',
-                                      website: '', // This field doesn't exist in your JSON
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    );
-                }
-              },
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.people_outlined,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            users.isEmpty ? 'No users found' : 'No matching users',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.grey[600],
             ),
           ),
+          if (users.isEmpty) ...[
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: _fetchUsers,
+              child: const Text('Retry'),
+            ),
+          ],
         ],
       ),
     );
+  }
+
+  Widget _buildUserCard(User user) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => UserDetailScreen(user: user),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // User Avatar
+              CircleAvatar(
+                radius: 25,
+                backgroundImage: user.image != null
+                    ? NetworkImage(user.image!)
+                    : null,
+                backgroundColor: Colors.blue.shade100,
+                child: user.image == null
+                    ? Text(
+                  '${user.firstName[0]}${user.lastName[0]}',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue.shade700,
+                  ),
+                )
+                    : null,
+              ),
+              const SizedBox(width: 16),
+
+              // User Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${user.firstName} ${user.lastName}',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '@${user.username}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    if (user.email != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        user.email!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+              // Age and Location (only show if available)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // Check if User class has age property
+                  if (user.age != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${user.age}y',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue.shade700,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  // Check if User class has address property
+                  if (user.address?.city != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.location_on,
+                          size: 12,
+                          color: Colors.grey[500],
+                        ),
+                        const SizedBox(width: 2),
+                        Text(
+                          user.address!.city!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+
+              const SizedBox(width: 8),
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: Colors.grey[400],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 }
